@@ -29,9 +29,10 @@
     "@prisma/client": "^6.16.2",
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.2",
+    "nestjs-zod": "^4.3.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "zod": "^4.1.11"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
