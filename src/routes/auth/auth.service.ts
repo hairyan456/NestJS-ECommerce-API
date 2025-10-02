@@ -8,6 +8,7 @@ import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo';
 import envConfig from 'src/shared/config';
 import { addMilliseconds } from 'date-fns';
 import ms from 'ms';
+import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant';
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,31 @@ export class AuthService {
 
   async register(body: RegisterBodyType) {
     try {
+      // kiểm tra xem OTP đã được gửi qua mail chưa:
+      const verificationCode = await this.authRepository.findUniqueVerificationCode({
+        email: body.email,
+        code: body.code,
+        type: TypeOfVerificationCode.REGISTER,
+      });
+      // nếu không tồn tại OTP
+      if (!verificationCode) {
+        throw new UnprocessableEntityException([
+          {
+            message: 'Mã OTP không hợp lệ',
+            path: 'code',
+          },
+        ]);
+      }
+      // nếu có OTP nhưng đã hết hạn
+      if (verificationCode.expiresAt < new Date()) {
+        throw new UnprocessableEntityException([
+          {
+            message: 'Mã OTP đã hết hạn',
+            path: 'code',
+          },
+        ]);
+      }
+
       const clientRoleId = await this.roleService.getClientRoleId();
       const hashedPassword = await this.hashingService.hashPassword(body.password);
       return await this.authRepository.createUser({
