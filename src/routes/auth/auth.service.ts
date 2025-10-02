@@ -9,6 +9,7 @@ import envConfig from 'src/shared/config';
 import { addMilliseconds } from 'date-fns';
 import ms from 'ms';
 import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant';
+import { EmailService } from 'src/shared/services/email.service';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     private readonly hashingService: HashingService,
     // private readonly tokenService: TokenService,
     private readonly roleService: RolesService,
+    private readonly emailService: EmailService,
 
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository,
@@ -91,6 +93,20 @@ export class AuthService {
       expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN)),
     });
 
+    // 3. Gửi mã OTP qua mail
+    const { error } = await this.emailService.sendOTP({
+      email: body.email,
+      code: otpCode,
+    });
+    if (error) {
+      console.log(error);
+      throw new UnprocessableEntityException([
+        {
+          message: 'Gửi mã OTP thất bại',
+          path: 'code',
+        },
+      ]);
+    }
     return verificationCode;
   }
 

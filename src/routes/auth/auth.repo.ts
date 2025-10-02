@@ -22,7 +22,7 @@ export class AuthRepository {
 
   async createVerificationCode(
     payload: Pick<VerificationCodeType, 'email' | 'type' | 'code' | 'expiresAt'>,
-  ): Promise<VerificationCodeType> {
+  ): Promise<Omit<VerificationCodeType, 'code'>> {
     return this.prismaService.verificationCode.upsert({
       where: {
         email: payload.email,
@@ -31,6 +31,10 @@ export class AuthRepository {
       update: {
         code: payload.code,
         expiresAt: payload.expiresAt,
+      },
+      // không trả field 'code' trong response
+      omit: {
+        code: true,
       },
     });
   }

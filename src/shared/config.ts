@@ -25,6 +25,7 @@ const configSchema = z.object({
   ADMIN_PASSWORD: z.string(),
   ADMIN_PHONE_NUMBER: z.string(),
   OTP_EXPIRES_IN: z.string().min(1, { message: 'OTP_EXPIRES_IN là bắt buộc' }),
+  RESEND_API_KEY: z.string().min(1, { message: 'RESEND_API_KEY là bắt buộc' }),
 });
 
 const configServer = configSchema.safeParse(process.env);
