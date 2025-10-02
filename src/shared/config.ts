@@ -24,6 +24,7 @@ const configSchema = z.object({
   ADMIN_EMAIL: z.string(),
   ADMIN_PASSWORD: z.string(),
   ADMIN_PHONE_NUMBER: z.string(),
+  OTP_EXPIRES_IN: z.string().min(1, { message: 'OTP_EXPIRES_IN là bắt buộc' }),
 });
 
 const configServer = configSchema.safeParse(process.env);
