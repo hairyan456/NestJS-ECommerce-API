@@ -1,8 +1,8 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { HashingService } from 'src/shared/services/hashing.service';
-import { generateOTP, isUniqueConstraintPrismaError } from 'src/shared/helpers';
+import { generateOTP, isNotFoundPrismaError, isUniqueConstraintPrismaError } from 'src/shared/helpers';
 import { RolesService } from './roles.service';
-import { LoginBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model';
+import { LoginBodyType, RefreshTokenBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model';
 import { AuthRepository } from './auth.repo';
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo';
 import envConfig from 'src/shared/config';
@@ -167,24 +167,34 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  // async refreshToken(refreshToken: string) {
-  //   try {
-  //     // 1. kiểm tra refresh token có hợp lệ không
-  //     const { userId } = await this.tokenService.verifyRefreshToken(refreshToken);
-  //     // 2. kiểm tra refresh token có trong db không (quăng lỗi nếu ko có)
-  //     await this.prismaService.refreshToken.findUniqueOrThrow({ where: { token: refreshToken } });
-  //     // 3. xóa refresh token cũ
-  //     await this.prismaService.refreshToken.delete({ where: { token: refreshToken } });
-  //     // 4. tạo mới access token và refresh token
-  //     const tokens = await this.generateTokens({ userId });
-  //     return tokens;
-  //   } catch (error) {
-  //     if (isNotFoundPrismaError(error)) {
-  //       throw new UnauthorizedException('Refresh token not found in database');
-  //     }
-  //     throw new UnauthorizedException('Invalid refresh token');
-  //   }
-  // }
+  async refreshToken({ refreshToken, userAgent, ip }: RefreshTokenBodyType & { userAgent: string; ip: string }) {
+    try {
+      // 1. kiểm tra refresh token có hợp lệ không
+      const { userId } = await this.tokenService.verifyRefreshToken(refreshToken);
+      // 2. kiểm tra refresh token có trong db không (quăng lỗi nếu ko có)
+      const findRefreshToken = await this.authRepository.findUniqueRefreshTokenIncludeUserRole({ token: refreshToken });
+      // 3. Cập nhật Device theo userAgent, IP mới
+      const {
+        deviceId,
+        user: { roleId, name: roleName },
+      } = findRefreshToken;
+      const $updateDevice = this.authRepository.updateDevice(deviceId, {
+        ip,
+        userAgent,
+      });
+      // 4. xóa refresh token cũ
+      const $deleteRefreshToken = this.authRepository.deleteRefreshToken({ token: refreshToken });
+      // 5. tạo mới access token và refresh token
+      const $tokens = this.generateTokens({ userId, roleId, roleName, deviceId });
+      const [, , tokens] = await Promise.all([$updateDevice, $deleteRefreshToken, $tokens]);
+      return tokens;
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw new UnauthorizedException('Refresh token không tìm thấy trong database');
+      }
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
 
   // async logout(refreshToken: string) {
   //   try {
