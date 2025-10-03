@@ -2,6 +2,7 @@ import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant';
 import { UserSchema } from 'src/shared/models/shared-user.model';
 import z from 'zod';
 
+// REGISTER
 export const RegisterBodySchema = UserSchema.pick({
   email: true,
   password: true,
@@ -29,6 +30,7 @@ export const RegisterResSchema = UserSchema.omit({
   totpSecret: true,
 });
 
+// OTP CODE
 export const VerificationCodeSchema = z.object({
   id: z.number(),
   email: z.string().email({ message: 'Email không hợp lệ' }),
@@ -43,6 +45,7 @@ export const SendOTPBodySchema = VerificationCodeSchema.pick({
   type: true,
 }).strict();
 
+// LOGIN
 export const LoginBodySchema = UserSchema.pick({
   email: true,
   password: true,
@@ -53,6 +56,15 @@ export const LoginResSchema = z.object({
   refreshToken: z.string(),
 });
 
+// REFRESH TOKEN
+export const RefreshTokenSchema = z.object({
+  token: z.string(),
+  userId: z.number(),
+  deviceId: z.number(),
+  expiresAt: z.date(),
+  createdAt: z.date(),
+});
+
 export const RefreshTokenBodySchema = z
   .object({
     refreshToken: z.string(),
@@ -61,6 +73,7 @@ export const RefreshTokenBodySchema = z
 
 export const RefreshTokenResSchema = LoginResSchema;
 
+// DEVICE
 export const DeviceSchema = z.object({
   id: z.number(),
   userId: z.number(),
@@ -71,6 +84,7 @@ export const DeviceSchema = z.object({
   isActive: z.boolean(),
 });
 
+// ROLE
 export const RoleSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -83,6 +97,10 @@ export const RoleSchema = z.object({
   updatedAt: z.date(),
 });
 
+// LOGOUT
+export const LogoutBodySchema = RefreshTokenBodySchema;
+
+// TYPES
 export type RegisterBodyType = z.infer<typeof RegisterBodySchema>;
 export type RegisterResType = z.infer<typeof RegisterResSchema>;
 
@@ -92,9 +110,12 @@ export type SendOTPBodyType = z.infer<typeof SendOTPBodySchema>;
 export type LoginBodyType = z.infer<typeof LoginBodySchema>;
 export type LoginResType = z.infer<typeof LoginResSchema>;
 
+export type RefreshTokenType = z.infer<typeof RefreshTokenSchema>;
 export type RefreshTokenBodyType = z.infer<typeof RefreshTokenBodySchema>;
 export type RefreshTokenResType = LoginResType;
 
 export type DeviceType = z.infer<typeof DeviceSchema>;
 
 export type RoleType = z.infer<typeof RoleSchema>;
+
+export type LogoutBodyType = RefreshTokenBodyType;
