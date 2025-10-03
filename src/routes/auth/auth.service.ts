@@ -2,7 +2,7 @@ import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { HashingService } from 'src/shared/services/hashing.service';
 import { generateOTP, isUniqueConstraintPrismaError } from 'src/shared/helpers';
 import { RolesService } from './roles.service';
-import { RegisterBodyType, SendOTPBodyType } from './auth.model';
+import { LoginBodyType, RegisterBodyType, SendOTPBodyType } from './auth.model';
 import { AuthRepository } from './auth.repo';
 import { SharedUserRepository } from 'src/shared/repositories/shared-user.repo';
 import envConfig from 'src/shared/config';
@@ -10,12 +10,14 @@ import { addMilliseconds } from 'date-fns';
 import ms from 'ms';
 import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant';
 import { EmailService } from 'src/shared/services/email.service';
+import { TokenService } from 'src/shared/services/token.service';
+import { IAccessTokenPayloadCreate } from 'src/shared/types/jwt.type';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly hashingService: HashingService,
-    // private readonly tokenService: TokenService,
+    private readonly tokenService: TokenService,
     private readonly roleService: RolesService,
     private readonly emailService: EmailService,
 
@@ -110,41 +112,60 @@ export class AuthService {
     return verificationCode;
   }
 
-  // async login(body: any) {
-  //   const user = await this.prismaService.user.findUnique({
-  //     where: { email: body.email },
-  //   });
+  async login(body: LoginBodyType & { userAgent: string; ip: string }) {
+    console.log(body.ip);
+    const user = await this.authRepository.findUniqueUserIncludeRole({
+      // trả về role object trong data user
+      email: body.email,
+    });
 
-  //   if (!user) {
-  //     throw new UnauthorizedException('Account does not exist');
-  //   }
+    if (!user) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Email không tồn tại',
+          path: 'email',
+        },
+      ]);
+    }
 
-  //   const isPasswordValid = await this.hashingService.comparePassword(body.password, user.password);
-  //   if (!isPasswordValid) {
-  //     throw new UnprocessableEntityException([{ field: 'password', error: 'Password is incorrect' }]);
-  //   }
+    const isPasswordValid = await this.hashingService.comparePassword(body.password, user.password);
+    if (!isPasswordValid) {
+      throw new UnprocessableEntityException([{ field: 'password', error: 'Mật khẩu không chính xác' }]);
+    }
 
-  //   const tokens = await this.generateTokens({ userId: user.id });
-  //   return tokens;
-  // }
+    // Tạo record Device mới (thiết bị đang Login)
+    const device = await this.authRepository.createDevice({
+      userId: user.id,
+      userAgent: body.userAgent,
+      ip: body.ip,
+    });
 
-  // async generateTokens(payload: { userId: number }) {
-  //   const [accessToken, refreshToken] = await Promise.all([
-  //     this.tokenService.signAccessToken(payload),
-  //     this.tokenService.signRefreshToken(payload),
-  //   ]);
+    const tokens = await this.generateTokens({
+      userId: user.id,
+      deviceId: device.id,
+      roleId: user.roleId,
+      roleName: user.role.name,
+    });
+    return tokens;
+  }
 
-  //   // lưu refresh token vào database
-  //   const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken);
-  //   await this.prismaService.refreshToken.create({
-  //     data: {
-  //       token: refreshToken,
-  //       userId: payload.userId,
-  //       expiresAt: new Date(decodedRefreshToken.exp * 1000),
-  //     },
-  //   });
-  //   return { accessToken, refreshToken };
-  // }
+  async generateTokens({ userId, deviceId, roleId, roleName }: IAccessTokenPayloadCreate) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.tokenService.signAccessToken({ userId, deviceId, roleId, roleName }),
+      this.tokenService.signRefreshToken({ userId }),
+    ]);
+
+    // lưu refresh token vào database
+    const decodedRefreshToken = await this.tokenService.verifyRefreshToken(refreshToken);
+    await this.authRepository.createRefreshToken({
+      token: refreshToken,
+      userId,
+      expiresAt: new Date(decodedRefreshToken.exp * 1000),
+      deviceId,
+    });
+
+    return { accessToken, refreshToken };
+  }
 
   // async refreshToken(refreshToken: string) {
   //   try {
