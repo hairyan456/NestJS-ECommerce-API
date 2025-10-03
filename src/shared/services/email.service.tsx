@@ -18,7 +18,7 @@ export class EmailService {
     // const html = await render(<OTPEmail validationCode={payload.code} title={subject} />, { pretty: true });
 
     return await this.resend.emails.send({
-      from: 'ECommerce <onboarding@resend.dev>',
+      from: 'ECommerce <no-reply@careernest.click>',
       to: [payload.email], // do môi trường Sandbox chỉ gửi được tới email mà mình đăng ký Resend
       subject,
       react: <OTPEmail validationCode={payload.code} title={subject} />,
