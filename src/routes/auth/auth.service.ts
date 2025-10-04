@@ -12,6 +12,7 @@ import { TypeOfVerificationCode } from 'src/shared/constants/auth.constant';
 import { EmailService } from 'src/shared/services/email.service';
 import { TokenService } from 'src/shared/services/token.service';
 import { IAccessTokenPayloadCreate } from 'src/shared/types/jwt.type';
+import { MessageResType } from 'src/shared/models/shared-response.model';
 
 @Injectable()
 export class AuthService {
@@ -196,18 +197,22 @@ export class AuthService {
     }
   }
 
-  // async logout(refreshToken: string) {
-  //   try {
-  //     // 1. kiểm tra refresh token có hợp lệ không
-  //     const { userId } = await this.tokenService.verifyRefreshToken(refreshToken);
-  //     // 2. xóa refresh token trong db (quăng lỗi nếu ko có)
-  //     if (userId) await this.prismaService.refreshToken.delete({ where: { token: refreshToken } });
-  //     return { message: 'Logout successfully' };
-  //   } catch (error) {
-  //     if (isNotFoundPrismaError(error)) {
-  //       throw new UnauthorizedException('Refresh token not found in database');
-  //     }
-  //     throw new UnauthorizedException('Invalid refresh token');
-  //   }
-  // }
+  async logout(refreshToken: string): Promise<MessageResType> {
+    try {
+      // 1. kiểm tra refresh token có hợp lệ không
+      await this.tokenService.verifyRefreshToken(refreshToken);
+      // 2. xóa refresh token trong db (quăng lỗi nếu ko có)
+      const deletedRefreshToken = await this.authRepository.deleteRefreshToken({ token: refreshToken });
+      // 3. Cập nhật Device là đã logout khỏi thiết bị
+      await this.authRepository.updateDevice(deletedRefreshToken.deviceId, {
+        isActive: false,
+      });
+      return { message: 'Đăng xuất thành công' };
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw new UnauthorizedException('Refresh token không tìm thấy trong database.');
+      }
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
 }
