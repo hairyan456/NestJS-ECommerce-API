@@ -76,7 +76,7 @@ export class AuthService {
     }
   }
 
-  async sendOTP(body: SendOTPBodyType) {
+  async sendOTP(body: SendOTPBodyType): Promise<MessageResType> {
     // 1. kiểm tra Email đã tồn tại hay chưa
     const findUser = await this.sharedUserRepository.findUnique({ email: body.email });
     if (findUser) {
@@ -89,11 +89,11 @@ export class AuthService {
     }
     // 2. Tạo mã OTP
     const otpCode = generateOTP();
-    const verificationCode = await this.authRepository.createVerificationCode({
+    await this.authRepository.createVerificationCode({
       email: body.email,
       type: body.type,
       code: otpCode,
-      expiresAt: addMilliseconds(new Date(), ms(envConfig.OTP_EXPIRES_IN)),
+      expiresAt: addMilliseconds(new Date(), Number(ms(envConfig.OTP_EXPIRES_IN))),
     });
 
     // 3. Gửi mã OTP qua mail
@@ -110,7 +110,8 @@ export class AuthService {
         },
       ]);
     }
-    return verificationCode;
+    // return verificationCode;
+    return { message: 'Gửi mã OTP thành công' };
   }
 
   async login(body: LoginBodyType & { userAgent: string; ip: string }) {

@@ -13,30 +13,34 @@ import {
 import { ZodSerializerDto } from 'nestjs-zod';
 import { UserAgent } from 'src/shared/decorators/user-agent.decorator';
 import { MessageResDTO } from 'src/shared/dtos/response.dto';
+import { Public } from 'src/shared/decorators/auth.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/register')
+  @Public() // mặc định guard là AuthGuard (Bearer token)
   @ZodSerializerDto(RegisterResDTO)
   handleRegister(@Body() body: RegisterBodyDTO) {
     return this.authService.register(body);
   }
 
   @Post('/otp')
+  @Public()
   handleSendOTP(@Body() body: SendOTPBodyDTO) {
     return this.authService.sendOTP(body);
   }
 
   @Post('/login')
+  @Public()
   @ZodSerializerDto(LoginResDTO)
   handleLogin(@Body() body: LoginBodyDTO, @UserAgent() userAgent: string, @Ip() ip: string) {
     return this.authService.login({ ...body, userAgent, ip });
   }
 
   @Post('/refresh-token')
-  // @UseGuards(AuthGuard) // guard cần truyền access token mới được phép truy cập vào route này
+  @Public()
   @ZodSerializerDto(RefreshTokenResDTO)
   @HttpCode(HttpStatus.OK)
   handleRefreshToken(@Body() body: RefreshTokenBodyDTO, @UserAgent() userAgent: string, @Ip() ip: string) {
