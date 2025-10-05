@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Post, Query, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   GetAuthorizationUrlResDTO,
@@ -16,6 +16,8 @@ import { UserAgent } from 'src/shared/decorators/user-agent.decorator';
 import { MessageResDTO } from 'src/shared/dtos/response.dto';
 import { Public } from 'src/shared/decorators/auth.decorator';
 import { GoogleService } from './google.service';
+import type { Response } from 'express';
+import envConfig from 'src/shared/config';
 
 @Controller('auth')
 export class AuthController {
@@ -64,5 +66,22 @@ export class AuthController {
   @ZodSerializerDto(GetAuthorizationUrlResDTO)
   handleGetAuthorizationUrl(@UserAgent() userAgent: string, @Ip() ip: string) {
     return this.googleService.getAuthorizationUrl({ userAgent, ip });
+  }
+
+  @Get('/google/callback')
+  @Public()
+  async handleRedirectGoogleCallback(@Query('code') code: string, @Query('state') state: string, @Res() res: Response) {
+    try {
+      const data = await this.googleService.redirectGoogleCallback({ code, state });
+      return res.redirect(
+        `${envConfig.GOOGLE_CLIENT_REDIRECT_URI}?accessToken=${data.accessToken}&refreshToken=${data.refreshToken}`,
+      );
+    } catch (error) {
+      const errMessage =
+        error instanceof Error
+          ? error.message
+          : 'Đã xảy ra lỗi khi đăng nhập bằng Google. Vui lòng thử lại bằng cách khác.';
+      return res.redirect(`${envConfig.GOOGLE_CLIENT_REDIRECT_URI}?errorMessage=${errMessage}`);
+    }
   }
 }
