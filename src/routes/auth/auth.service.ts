@@ -178,7 +178,10 @@ export class AuthService {
       // 3. Cập nhật Device theo userAgent, IP mới
       const {
         deviceId,
-        user: { roleId, name: roleName },
+        user: {
+          roleId,
+          role: { name: roleName },
+        },
       } = findRefreshToken;
       const $updateDevice = this.authRepository.updateDevice(deviceId, {
         ip,
