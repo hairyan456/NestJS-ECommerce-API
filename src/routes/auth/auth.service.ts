@@ -43,9 +43,11 @@ export class AuthService {
   }) {
     // kiểm tra xem OTP đã được gửi qua mail chưa:
     const verificationCode = await this.authRepository.findUniqueVerificationCode({
-      email,
-      code,
-      type,
+      email_code_type: {
+        email,
+        code,
+        type,
+      },
     });
     // nếu không tồn tại OTP
     if (!verificationCode) {
@@ -87,9 +89,11 @@ export class AuthService {
           roleId: clientRoleId,
         }),
         this.authRepository.deleteVerificationCode({
-          email: body.email,
-          code: body.code,
-          type: TypeOfVerificationCode.REGISTER,
+          email_code_type: {
+            email: body.email,
+            code: body.code,
+            type: TypeOfVerificationCode.REGISTER,
+          },
         }),
       ]);
       return user;
@@ -286,9 +290,11 @@ export class AuthService {
     await Promise.all([
       this.authRepository.updateUser({ id: findUser.id }, { password: hashedPassword }),
       this.authRepository.deleteVerificationCode({
-        email,
-        code,
-        type: TypeOfVerificationCode.FORGOT_PASSWORD,
+        email_code_type: {
+          email,
+          code,
+          type: TypeOfVerificationCode.FORGOT_PASSWORD,
+        },
       }),
     ]);
 
