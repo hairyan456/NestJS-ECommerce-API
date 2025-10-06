@@ -111,4 +111,22 @@ export class AuthRepository {
       data,
     });
   }
+
+  updateUser(uniqueObject: { id: number } | { email: string }, data: Partial<Omit<UserType, 'id'>>): Promise<UserType> {
+    return this.prismaService.user.update({
+      where: uniqueObject,
+      data,
+    });
+  }
+
+  deleteVerificationCode(
+    uniqueObject:
+      | { email: string }
+      | { id: number }
+      | { email: string; code: string; type: TypeOfVerificationCodeType },
+  ): Promise<VerificationCodeType> {
+    return this.prismaService.verificationCode.delete({
+      where: uniqueObject,
+    });
+  }
 }
