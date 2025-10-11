@@ -19,6 +19,7 @@ import { EmailService } from 'src/shared/services/email.service';
 import { TokenService } from 'src/shared/services/token.service';
 import { IAccessTokenPayloadCreate } from 'src/shared/types/jwt.type';
 import { MessageResType } from 'src/shared/models/shared-response.model';
+import { TwoFactorAuthService } from 'src/shared/services/2fa.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly roleService: RolesService,
     private readonly emailService: EmailService,
+    private readonly twoFactorAuthService: TwoFactorAuthService,
 
     private readonly authRepository: AuthRepository,
     private readonly sharedUserRepository: SharedUserRepository,
@@ -299,5 +301,31 @@ export class AuthService {
     ]);
 
     return { message: 'Đổi mật khẩu thành công' };
+  }
+  async setupTwoFactorAuth(userId: number) {
+    // 1. Lấy thông tin user, kiểm tra user có tồn tại hay không, và xem user đã bật 2FA hay chưa.
+    const findUser = await this.sharedUserRepository.findUnique({ id: userId });
+    if (!findUser) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Email không tồn tại',
+          path: 'email',
+        },
+      ]);
+    }
+    if (findUser.totpSecret) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Người dùng đã bật xác thực 2FA.',
+          path: 'totpCode',
+        },
+      ]);
+    }
+    // 2. Tạo secret & uri
+    const { secret, uri } = this.twoFactorAuthService.generateTOTPSecret(findUser.email);
+    // 3. Cập nhật secret vào User trong database
+    await this.authRepository.updateUser({ id: userId }, { totpSecret: secret });
+    // 4. Trả về secret & uri
+    return { secret, uri };
   }
 }
