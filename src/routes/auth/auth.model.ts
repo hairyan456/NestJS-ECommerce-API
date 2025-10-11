@@ -59,7 +59,25 @@ export const LoginBodySchema = UserSchema.pick({
     totpCode: z.string().length(6).optional(), // 2FA code
     code: z.string().length(6).optional(), // Email OTP code
   })
-  .strict();
+  .strict()
+  .superRefine(({ totpCode, code }, ctx) => {
+    const message = 'Bạn chỉ nên cung cấp mã xác thực 2FA hoặc OTP. Không đồng thời cả 2.';
+    // Nếu cả 2 cùng có hoặc cùng không có giá trị thì báo lỗi.
+    // Yêu cầu chỉ được cung cấp đúng 1 trong 2: totpCode hoặc code.
+    // "&&" để phòng trường hợp người dùng chưa bật xác thực 2FA
+    if (totpCode !== undefined && code !== undefined) {
+      ctx.addIssue({
+        path: ['totpCode'],
+        message,
+        code: 'custom',
+      });
+      ctx.addIssue({
+        path: ['code'],
+        message,
+        code: 'custom',
+      });
+    }
+  });
 
 export const LoginResSchema = z.object({
   accessToken: z.string(),

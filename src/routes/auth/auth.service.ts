@@ -163,6 +163,7 @@ export class AuthService {
   }
 
   async login(body: LoginBodyType & { userAgent: string; ip: string }) {
+    // 1. Lấy thông tin & kiểm tra user có tồn tại hay không, password có đúng không.
     const user = await this.authRepository.findUniqueUserIncludeRole({
       // trả về role object trong data user
       email: body.email,
@@ -182,13 +183,43 @@ export class AuthService {
       throw new UnprocessableEntityException([{ field: 'password', error: 'Mật khẩu không chính xác' }]);
     }
 
-    // Tạo record Device mới (thiết bị đang Login)
+    // 2. nếu user đã bật mã 2FA => kiểm tra mã 2FA TOTP Code hoặc OTP Code (email)
+    if (user.totpSecret) {
+      // nếu không truyền totp code hoặc otp code thì thông báo client biết
+      if (!body.code && !body.totpCode) {
+        throw new UnprocessableEntityException([
+          { path: 'totpCode', message: 'Không tìm thấy TOTP Code' },
+          { path: 'code', message: 'Không tìm thấy OTP Code' },
+        ]);
+      }
+      // kiểm tra TOTP Code có hợp lệ hay không
+      if (body.totpCode) {
+        const isValid = this.twoFactorAuthService.verifyOTP({
+          email: user.email,
+          secret: user.totpSecret,
+          token: body.totpCode,
+        });
+        if (!isValid) {
+          throw new UnprocessableEntityException([{ path: 'totpCode', message: 'TOTP Code không hợp lệ.' }]);
+        }
+      } else if (body.code) {
+        // kiểm tra OTP Code có hợp lệ hay không
+        await this.validateVerificationCode({
+          email: user.email,
+          code: body.code,
+          type: TypeOfVerificationCode.LOGIN,
+        });
+      }
+    }
+
+    // 3. Tạo record Device mới (thiết bị đang Login)
     const device = await this.authRepository.createDevice({
       userId: user.id,
       userAgent: body.userAgent,
       ip: body.ip,
     });
 
+    // 4. Tạo mới access token, refresh token
     const tokens = await this.generateTokens({
       userId: user.id,
       deviceId: device.id,
