@@ -3,6 +3,7 @@ import { HashingService } from 'src/shared/services/hashing.service';
 import { generateOTP, isNotFoundPrismaError, isUniqueConstraintPrismaError } from 'src/shared/helpers';
 import { RolesService } from './roles.service';
 import {
+  DisableTwoFactorBodyType,
   ForgotPasswordBodyType,
   LoginBodyType,
   RefreshTokenBodyType,
@@ -358,5 +359,55 @@ export class AuthService {
     await this.authRepository.updateUser({ id: userId }, { totpSecret: secret });
     // 4. Trả về secret & uri
     return { secret, uri };
+  }
+
+  async disableTwoFactorAuth(data: DisableTwoFactorBodyType & { userId: number }): Promise<MessageResType> {
+    const { userId, totpCode, code } = data;
+    // 1. Lấy thông tin user, kiểm tra user tồn tại hay không, và xem họ đã bật 2FA hay chưa.
+    const findUser = await this.sharedUserRepository.findUnique({ id: userId });
+    if (!findUser) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Email không tồn tại',
+          path: 'email',
+        },
+      ]);
+    }
+    if (!findUser.totpSecret) {
+      throw new UnprocessableEntityException([
+        {
+          message: 'Người dùng chưa bật xác thực OTP Code.',
+          path: 'totpCode',
+        },
+      ]);
+    }
+
+    // 2. Kiểm tra mã (TOTP Code) hay (OTP Code) có hợp lệ hay không.
+    if (totpCode) {
+      const isValid = this.twoFactorAuthService.verifyOTP({
+        email: findUser.email,
+        secret: findUser.totpSecret,
+        token: totpCode,
+      });
+      if (!isValid) {
+        throw new UnprocessableEntityException([
+          {
+            message: 'TOTP Code không hợp lê',
+            path: 'totpCode',
+          },
+        ]);
+      }
+    } else if (code) {
+      await this.validateVerificationCode({
+        email: findUser.email,
+        code,
+        type: TypeOfVerificationCode.DISABLE_2FA,
+      });
+    }
+
+    // 3. Cập nhật totpSecret cho User thành "null"
+    await this.authRepository.updateUser({ id: userId }, { totpSecret: null });
+
+    return { message: 'Tắt xác thực 2FA thành công' };
   }
 }
