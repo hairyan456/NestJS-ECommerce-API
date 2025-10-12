@@ -52,12 +52,18 @@ Nếu bạn đã có sẵn file `schema.prisma` do đang sử dụng cách `pris
 
 1. Tạo thư mục `prisma/migrations/0_init`
 2. Dựa vào file `schema.prisma`, tạo file migration bằng câu lệnh sau
+   **lưu ý: chạy lệnh trong cmd của window để tránh bị lỗi UTF-16**
 
    ```bash
-   npx prisma migrate diff \
-   --from-empty \
-   --to-schema-datamodel prisma/schema.prisma \
-   --script > prisma/migrations/0_init/migration.sql
+   npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma  --script > prisma/migrations/0_init/migration.sql
+   ```
+
+   sau đó, chạy tiếp 2 lệnh sau để apply migration vừa tạo vào DB
+
+   ```bash
+   $env:PGPASSWORD = 'test123'
+
+   & "D:\Postgres\bin\psql.exe" -h 127.0.0.1 -U postgres -d e-commerce -f "D:\DuThanhDuoc\e-commerce-api\prisma\migrations\0_init\migration.sql"
    ```
 
 3. Đánh dấu là file `0_init/migration.sql` đã được áp dụng. Câu lệnh dưới đây sẽ không thay đổi cấu trúc database, nó chỉ cập nhật dữ liệu trong table `_prisma_migrations`
