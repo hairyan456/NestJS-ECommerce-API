@@ -7,13 +7,24 @@ import { PrismaService } from 'src/shared/services/prisma.service';
 const prisma = new PrismaService();
 const logger = new Logger();
 
+/**
+ * Viết 1 script phát hiện:
+ *  - Nếu permissions trong DB không tồn tại trong các routes của hệ thống hiện tại => Delete
+ *  - Nếu trong routes hệ thống hiện tại chứa route mà chưa tồn tại trong Permission của DB => Create
+ */
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   await app.listen(3010);
   const server = app.getHttpAdapter().getInstance();
   const router = server.router;
 
-  const availableRoutes = router.stack
+  const permissionsInDB = await prisma.permission.findMany({
+    where: {
+      deletedAt: null,
+    },
+  });
+  const availableRoutes: { path: string; method: keyof typeof HTTPMethod; name: string }[] = router.stack
     .map((layer) => {
       if (layer?.route) {
         const path = layer.route?.path;
@@ -27,31 +38,52 @@ async function bootstrap() {
     })
     .filter((item) => item !== undefined);
 
-  // Add vào Database với logic kiểm tra tồn tại
-  try {
-    // 1. Kiểm tra xem đã có bản ghi nào trong bảng Permission chưa
-    const existingCount = await prisma.permission.count();
+  // Tạo object permissionsInDBMap với key: [method-path]
+  const permissionsInDBMap: Record<string, (typeof permissionsInDB)[0]> = permissionsInDB.reduce((acc, item) => {
+    acc[`${item.method}-${item.path}`] = item;
+    return acc;
+  }, {});
+  // Tạo object availableRoutesMap với key: [method-path]
+  const availableRoutesMap: Record<string, (typeof availableRoutes)[0]> = availableRoutes.reduce((acc, item) => {
+    acc[`${item.method}-${item.path}`] = item;
+    return acc;
+  }, {});
 
-    if (existingCount > 0) {
-      // 2. Nếu đã có bản ghi, thông báo và không làm gì cả
-      logger.warn('Permissions have already been seeded. Skipping initialization.');
-    } else {
-      // 3. Nếu chưa có, thực hiện createMany
-      const result = await prisma.permission.createMany({
-        data: availableRoutes,
-        skipDuplicates: true, // Bổ sung skipDuplicates: true để an toàn hơn
-      });
-      logger.log(`Successfully seeded ${result.count} permissions into the database.`);
-    }
-  } catch (error) {
-    logger.error('Error during permission seeding:', error);
-    // Nếu có lỗi, ta thoát với mã lỗi 1 để báo hiệu thất bại
-    process.exit(1);
-  } finally {
-    // Đảm bảo quy trình thoát dù thành công hay thất bại (trừ khi thoát với mã 1 ở trên)
-    if (process.exitCode !== 1) {
-      process.exit(0);
-    }
+  // Tìm permissions trong DB mà không tồn tại trong availableRoutes
+  const permissionsToDelete = permissionsInDB.filter((item) => {
+    return !availableRoutesMap[`${item.method}-${item.path}`];
+  });
+
+  // Xóa permissions không tồn tại trong availableRoutes
+  if (permissionsToDelete.length > 0) {
+    const deleteResult = await prisma.permission.deleteMany({
+      where: {
+        id: {
+          in: permissionsToDelete.map((item) => item.id),
+        },
+      },
+    });
+    logger.warn(`Deleted ${deleteResult.count} permissions from the database.`);
+  } else {
+    logger.verbose('No permission to delete');
   }
+
+  // Tìm routes trong source code mà không tồn tại trong permissionsInDB
+  const routesToAdd = availableRoutes.filter((item) => {
+    return !permissionsInDBMap[`${item.method}-${item.path}`];
+  });
+
+  // Thêm các routes này vào permission DB
+  if (routesToAdd.length > 0) {
+    const permissionsToAdd = await prisma.permission.createMany({
+      data: routesToAdd,
+      skipDuplicates: true, // Bổ sung skipDuplicates: true để an toàn hơn
+    });
+    logger.warn(`Added ${permissionsToAdd.count} permissions to the database.`);
+  } else {
+    logger.verbose('No permission to add');
+  }
+
+  process.exit(0);
 }
 bootstrap();
