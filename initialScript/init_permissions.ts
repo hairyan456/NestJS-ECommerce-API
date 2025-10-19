@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from 'src/app.module';
-import { HTTPMethod } from 'src/shared/constants/role.constant';
+import { HTTPMethod, RoleName } from 'src/shared/constants/role.constant';
 import { PrismaService } from 'src/shared/services/prisma.service';
 
 const prisma = new PrismaService();
@@ -82,6 +82,32 @@ async function bootstrap() {
     logger.warn(`Added ${permissionsToAdd.count} permissions to the database.`);
   } else {
     logger.verbose('No permission to add');
+  }
+
+  // Lấy lại permissions trong database sau khi thêm mới (hoặc bị xóa bớt)
+  const updatedPermissionsInDb = await prisma.permission.findMany({
+    where: {
+      deletedAt: null,
+    },
+  });
+  // Cập nhật lại các permissions trong role ADMIN
+  const adminRole = await prisma.role.findFirstOrThrow({
+    where: {
+      name: RoleName.ADMIN,
+      deletedAt: null,
+    },
+  });
+  if (adminRole) {
+    await prisma.role.update({
+      where: {
+        id: adminRole.id,
+      },
+      data: {
+        permissions: {
+          set: updatedPermissionsInDb.map((item) => ({ id: item.id })),
+        },
+      },
+    });
   }
 
   process.exit(0);
