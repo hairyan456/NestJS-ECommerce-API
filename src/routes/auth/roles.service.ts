@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { RoleName } from 'src/shared/constants/role.constant';
 import { PrismaService } from 'src/shared/services/prisma.service';
+import { RoleType } from './auth.model';
 
 @Injectable()
 export class RolesService {
@@ -14,11 +15,16 @@ export class RolesService {
       return this.clientRoleId;
     }
 
-    const role = await this.prismaService.role.findUniqueOrThrow({
-      where: {
-        name: RoleName.CLIENT,
+    // do sửa lại PARTIAL_UNIQUE_INDEX cho "name" trên table "Role" khi deleteAt=null, nên dùng queryRaw để truy vấn
+    const role: RoleType = await this.prismaService
+      .$queryRaw`SELECT * FROM "Role" WHERE "name" = ${RoleName.CLIENT} AND "deletedAt" IS NULL LIMIT 1`.then(
+      (res: RoleType[]) => {
+        if (res.length === 0) {
+          throw new NotFoundException('Role CLIENT not found');
+        }
+        return res[0];
       },
-    });
+    );
 
     this.clientRoleId = role.id;
     return role.id;
