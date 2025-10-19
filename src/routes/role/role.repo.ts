@@ -46,7 +46,11 @@ export class RoleRepo {
         deletedAt: null,
       },
       include: {
-        permissions: true,
+        permissions: {
+          where: {
+            deletedAt: null,
+          },
+        },
       },
     }) as any;
   }
@@ -60,7 +64,31 @@ export class RoleRepo {
     }) as any;
   }
 
-  update({ id, updatedById, data }: { id: number; updatedById: number; data: UpdateRoleBodyType }): Promise<RoleType> {
+  async update({
+    id,
+    updatedById,
+    data,
+  }: {
+    id: number;
+    updatedById: number;
+    data: UpdateRoleBodyType;
+  }): Promise<RoleType> {
+    // Kiểm tra nếu có permissionId nào đã được soft_delete thì không cho phép cập nhật
+    if (data.permissionIds.length > 0) {
+      const permissions = await this.prismaService.permission.findMany({
+        where: {
+          id: {
+            in: data.permissionIds,
+          },
+        },
+      });
+      const deletedPermissions = permissions.filter((p) => p.deletedAt !== null);
+      if (deletedPermissions.length > 0) {
+        const deletedIds = deletedPermissions.map((p) => p.id).join(', ');
+        throw new Error(`Permissions with id ${deletedIds} have been deleted`);
+      }
+    }
+
     return this.prismaService.role.update({
       where: {
         id,
@@ -76,7 +104,11 @@ export class RoleRepo {
         updatedById,
       },
       include: {
-        permissions: true,
+        permissions: {
+          where: {
+            deletedAt: null,
+          },
+        },
       },
     });
   }
