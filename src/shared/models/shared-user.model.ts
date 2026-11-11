@@ -1,5 +1,7 @@
 import z from 'zod';
 import { UserStatus } from 'src/shared/constants/auth.constant';
+import { RoleSchema } from 'src/shared/models/shared-role.model';
+import { PermissionSchema } from 'src/shared/models/shared-permission.model';
 
 export const UserSchema = z.object({
   id: z.number(),
@@ -19,4 +21,37 @@ export const UserSchema = z.object({
   updatedAt: z.date(),
 });
 
+/**
+ * Áp dụng cho Response của api GET('profile') và GET('users/:userId')
+ */
+export const GetUserProfileResSchema = UserSchema.omit({
+  password: true,
+  totpSecret: true,
+}).extend({
+  role: RoleSchema.pick({
+    id: true,
+    name: true,
+  }).extend({
+    permissions: z.array(
+      PermissionSchema.pick({
+        id: true,
+        name: true,
+        module: true,
+        path: true,
+        method: true,
+      }),
+    ),
+  }),
+});
+
+/**
+ * Áp dụng cho Response của api PUT('profile') và PUT('users/:userId')
+ */
+export const UpdateProfileResSchema = UserSchema.omit({
+  password: true,
+  totpSecret: true,
+});
+
 export type UserType = z.infer<typeof UserSchema>;
+export type GetUserProfileResType = z.infer<typeof GetUserProfileResSchema>;
+export type UpdateProfileResType = z.infer<typeof UpdateProfileResSchema>;
