@@ -5,6 +5,8 @@ import { isNotFoundPrismaError, isUniqueConstraintPrismaError } from 'src/shared
 import { RoleAlreadyExistsException } from 'src/routes/role/role.error';
 import { RoleName } from 'src/shared/constants/role.constant';
 
+const BASE_ROLE_NAMES: string[] = [RoleName.ADMIN, RoleName.CLIENT, RoleName.SELLER];
+
 @Injectable()
 export class RoleService {
   constructor(private roleRepo: RoleRepo) {}
@@ -37,16 +39,22 @@ export class RoleService {
     }
   }
 
+  /**
+   * Kiểm tra xem role có phải là 1 trong 3 role cơ bản không
+   */
+  private async verifyRole(roleId: number) {
+    const role = await this.roleRepo.findById(roleId);
+    if (!role) {
+      throw new NotFoundException('Role không tồn tại trong hệ thống');
+    }
+    if (BASE_ROLE_NAMES.includes(role.name)) {
+      throw new ForbiddenException('Không thể thực hiện hành động này trên role cơ bản');
+    }
+  }
+
   async update({ id, data, updatedById }: { id: number; data: UpdateRoleBodyType; updatedById: number }) {
     try {
-      const role = await this.roleRepo.findById(id);
-      if (!role) {
-        throw new NotFoundException('Role không tồn tại trong hệ thống');
-      }
-      // Không cho bất kì ai cập nhật role ADMIN
-      if (role.name === RoleName.ADMIN) {
-        throw new ForbiddenException('Không thể cập nhật role này!');
-      }
+      await this.verifyRole(id);
 
       const updatedRole = await this.roleRepo.update({
         id,
@@ -70,15 +78,7 @@ export class RoleService {
 
   async delete({ id, deletedById }: { id: number; deletedById: number }) {
     try {
-      const role = await this.roleRepo.findById(id);
-      if (!role) {
-        throw new NotFoundException('Role không tồn tại trong hệ thống');
-      }
-      // Không cho phép xóa 3 role cơ bản: ADMIN, CLIENT, SELLER
-      const baseRoles: string[] = [RoleName.ADMIN, RoleName.CLIENT, RoleName.SELLER];
-      if (baseRoles.includes(role.name)) {
-        throw new ForbiddenException('Không thể xóa role này!');
-      }
+      await this.verifyRole(id);
 
       await this.roleRepo.delete({
         id,

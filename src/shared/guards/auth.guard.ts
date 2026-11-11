@@ -53,6 +53,7 @@ export class AuthGuard implements CanActivate {
         where: {
           id: roleId,
           deletedAt: null,
+          isActive: true,
         },
         include: {
           permissions: {
