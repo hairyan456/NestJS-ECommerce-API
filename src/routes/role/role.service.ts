@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { RoleRepo } from 'src/routes/role/role.repo';
 import { CreateRoleBodyType, GetRolesQueryType, UpdateRoleBodyType } from 'src/routes/role/role.model';
 import { isNotFoundPrismaError, isUniqueConstraintPrismaError } from 'src/shared/helpers';
 import { RoleAlreadyExistsException } from 'src/routes/role/role.error';
+import { RoleName } from 'src/shared/constants/role.constant';
 
 @Injectable()
 export class RoleService {
@@ -38,12 +39,21 @@ export class RoleService {
 
   async update({ id, data, updatedById }: { id: number; data: UpdateRoleBodyType; updatedById: number }) {
     try {
-      const role = await this.roleRepo.update({
+      const role = await this.roleRepo.findById(id);
+      if (!role) {
+        throw new NotFoundException('Role không tồn tại trong hệ thống');
+      }
+      // Không cho bất kì ai cập nhật role ADMIN
+      if (role.name === RoleName.ADMIN) {
+        throw new ForbiddenException('Không thể cập nhật role này!');
+      }
+
+      const updatedRole = await this.roleRepo.update({
         id,
         updatedById,
         data,
       });
-      return role;
+      return updatedRole;
     } catch (error) {
       if (isNotFoundPrismaError(error)) {
         throw new NotFoundException('Role không tồn tại');
@@ -60,6 +70,16 @@ export class RoleService {
 
   async delete({ id, deletedById }: { id: number; deletedById: number }) {
     try {
+      const role = await this.roleRepo.findById(id);
+      if (!role) {
+        throw new NotFoundException('Role không tồn tại trong hệ thống');
+      }
+      // Không cho phép xóa 3 role cơ bản: ADMIN, CLIENT, SELLER
+      const baseRoles: string[] = [RoleName.ADMIN, RoleName.CLIENT, RoleName.SELLER];
+      if (baseRoles.includes(role.name)) {
+        throw new ForbiddenException('Không thể xóa role này!');
+      }
+
       await this.roleRepo.delete({
         id,
         deletedById,
@@ -69,7 +89,7 @@ export class RoleService {
       };
     } catch (error) {
       if (isNotFoundPrismaError(error)) {
-        throw new NotFoundException('Role không tồn tại');
+        throw new NotFoundException('Role không tồn tại trong hệ thống');
       }
       throw error;
     }
