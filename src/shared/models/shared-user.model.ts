@@ -13,9 +13,9 @@ export const UserSchema = z.object({
   totpSecret: z.string().nullable(),
   status: z.enum([UserStatus.ACTIVE, UserStatus.INACTIVE, UserStatus.BLOCKED]),
   roleId: z.number().positive(),
-
   createdById: z.number().nullable(),
   updatedById: z.number().nullable(),
+  deletedById: z.number().nullable(),
   deletedAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),

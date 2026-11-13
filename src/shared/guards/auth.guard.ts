@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { TokenService } from '../services/token.service';
-import { REQUEST_USER_KEY } from '../constants/auth.constant';
+import { REQUEST_ROLE_PERMISSIONS_KEY, REQUEST_USER_KEY } from '../constants/auth.constant';
 import { IAccessTokenPayload } from '../types/jwt.type';
 import { PrismaService } from '../services/prisma.service';
 import { HTTPMethod } from '../constants/role.constant';
@@ -72,5 +72,6 @@ export class AuthGuard implements CanActivate {
     if (!canAccess) {
       throw new ForbiddenException(`You don't have permission to access this route`);
     }
+    request[REQUEST_ROLE_PERMISSIONS_KEY] = role;
   }
 }
