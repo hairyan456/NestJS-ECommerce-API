@@ -82,8 +82,11 @@ export class AuthRepository {
 
   // hàm tìm user có trả về role object
   async findUniqueUserIncludeRole(where: WhereUniqueUserType): Promise<(UserType & { role: RoleType }) | null> {
-    return await this.prismaService.user.findUnique({
-      where,
+    return await this.prismaService.user.findFirst({
+      where: {
+        ...where,
+        deletedAt: null,
+      },
       include: {
         role: true,
       },

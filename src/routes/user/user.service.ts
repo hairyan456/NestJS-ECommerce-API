@@ -33,7 +33,6 @@ export class UserService {
   async findById(id: number) {
     const user = await this.sharedUserRepository.findUniqueIncludeRolePermissions({
       id,
-      deletedAt: null,
     });
     if (!user) {
       throw new NotFoundException('Không tìm thấy user trong hệ thống');
@@ -125,7 +124,7 @@ export class UserService {
       });
 
       const updatedUser = await this.sharedUserRepository.update(
-        { id, deletedAt: null },
+        { id },
         {
           ...data,
           updatedById,

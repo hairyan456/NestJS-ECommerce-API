@@ -4,7 +4,7 @@ import { UserType } from 'src/shared/models/shared-user.model';
 import { RoleType } from 'src/shared/models/shared-role.model';
 import { PermissionType } from 'src/shared/models/shared-permission.model';
 
-export type WhereUniqueUserType = { id: number; [key: string]: any } | { email: string; [key: string]: any };
+export type WhereUniqueUserType = { id: number } | { email: string };
 
 type UserIncludeRolePermissionsType = UserType & { role: RoleType & { permissions: PermissionType[] } };
 
@@ -13,14 +13,20 @@ export class SharedUserRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
   findUnique(where: WhereUniqueUserType): Promise<UserType | null> {
-    return this.prismaService.user.findUnique({
-      where,
+    return this.prismaService.user.findFirst({
+      where: {
+        ...where,
+        deletedAt: null,
+      },
     });
   }
 
   findUniqueIncludeRolePermissions(where: WhereUniqueUserType): Promise<UserIncludeRolePermissionsType | null> {
-    return this.prismaService.user.findUnique({
-      where,
+    return this.prismaService.user.findFirst({
+      where: {
+        ...where,
+        deletedAt: null,
+      },
       include: {
         role: {
           include: {
@@ -35,9 +41,12 @@ export class SharedUserRepository {
     });
   }
 
-  update(where: WhereUniqueUserType, data: Partial<UserType>): Promise<UserType | null> {
+  update(where: { id: number }, data: Partial<UserType>): Promise<UserType | null> {
     return this.prismaService.user.update({
-      where,
+      where: {
+        ...where,
+        deletedAt: null,
+      },
       data,
     });
   }
