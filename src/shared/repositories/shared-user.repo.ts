@@ -4,7 +4,7 @@ import { UserType } from 'src/shared/models/shared-user.model';
 import { RoleType } from 'src/shared/models/shared-role.model';
 import { PermissionType } from 'src/shared/models/shared-permission.model';
 
-type WhereUniqueUserType = { id: number; [key: string]: any } | { email: string; [key: string]: any };
+export type WhereUniqueUserType = { id: number; [key: string]: any } | { email: string; [key: string]: any };
 
 type UserIncludeRolePermissionsType = UserType & { role: RoleType & { permissions: PermissionType[] } };
 
