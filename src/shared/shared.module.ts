@@ -9,6 +9,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthenticationGuard } from './guards/authentication.guard';
 import { EmailService } from './services/email.service';
 import { SharedUserRepository } from './repositories/shared-user.repo';
+import { SharedRoleRepository } from 'src/shared/repositories/shared-role.repo';
 
 @Global()
 @Module({
@@ -21,11 +22,12 @@ import { SharedUserRepository } from './repositories/shared-user.repo';
     AuthGuard,
     APIKeyGuard,
     SharedUserRepository,
+    SharedRoleRepository,
     {
       provide: APP_GUARD,
       useClass: AuthenticationGuard,
     },
   ],
-  exports: [PrismaService, HashingService, TokenService, EmailService, SharedUserRepository],
+  exports: [PrismaService, HashingService, TokenService, EmailService, SharedUserRepository, SharedRoleRepository],
 })
 export class SharedModule {}

@@ -203,8 +203,6 @@ export type RefreshTokenResType = LoginResType;
 
 export type DeviceType = z.infer<typeof DeviceSchema>;
 
-export type RoleType = z.infer<typeof RoleSchema>;
-
 export type LogoutBodyType = RefreshTokenBodyType;
 
 export type GoogleAuthStateType = z.infer<typeof GoogleAuthStateSchema>;

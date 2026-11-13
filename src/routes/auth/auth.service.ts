@@ -1,7 +1,6 @@
 import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { HashingService } from 'src/shared/services/hashing.service';
 import { generateOTP, isNotFoundPrismaError, isUniqueConstraintPrismaError } from 'src/shared/helpers';
-import { RolesService } from './roles.service';
 import {
   DisableTwoFactorBodyType,
   ForgotPasswordBodyType,
@@ -21,13 +20,14 @@ import { TokenService } from 'src/shared/services/token.service';
 import { IAccessTokenPayloadCreate } from 'src/shared/types/jwt.type';
 import { MessageResType } from 'src/shared/models/shared-response.model';
 import { TwoFactorAuthService } from 'src/shared/services/2fa.service';
+import { SharedRoleRepository } from 'src/shared/repositories/shared-role.repo';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly hashingService: HashingService,
     private readonly tokenService: TokenService,
-    private readonly roleService: RolesService,
+    private readonly sharedRoleRepository: SharedRoleRepository,
     private readonly emailService: EmailService,
     private readonly twoFactorAuthService: TwoFactorAuthService,
 
@@ -81,7 +81,7 @@ export class AuthService {
         type: TypeOfVerificationCode.REGISTER,
       });
 
-      const clientRoleId = await this.roleService.getClientRoleId();
+      const clientRoleId = await this.sharedRoleRepository.getClientRoleId();
       const hashedPassword = await this.hashingService.hashPassword(body.password);
       const [user] = await Promise.all([
         this.authRepository.createUser({

@@ -6,7 +6,7 @@ import {
   RoleWithPermissionsType,
   UpdateRoleBodyType,
 } from 'src/routes/role/role.model';
-import { RoleType } from '../auth/auth.model';
+import { RoleType } from 'src/shared/models/shared-role.model';
 import { PrismaService } from 'src/shared/services/prisma.service';
 
 @Injectable()
