@@ -10,6 +10,7 @@ import { AuthenticationGuard } from './guards/authentication.guard';
 import { EmailService } from './services/email.service';
 import { SharedUserRepository } from './repositories/shared-user.repo';
 import { SharedRoleRepository } from 'src/shared/repositories/shared-role.repo';
+import { S3Service } from 'src/shared/services/s3.service';
 
 @Global()
 @Module({
@@ -23,6 +24,7 @@ import { SharedRoleRepository } from 'src/shared/repositories/shared-role.repo';
     APIKeyGuard,
     SharedUserRepository,
     SharedRoleRepository,
+    S3Service,
     {
       provide: APP_GUARD,
       useClass: AuthenticationGuard,
