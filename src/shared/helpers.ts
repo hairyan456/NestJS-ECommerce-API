@@ -1,5 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { randomInt } from 'crypto';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 // catch lỗi unique constraint error (trùng giá trị ở trường unique)
 export function isUniqueConstraintPrismaError(error: any): error is Prisma.PrismaClientKnownRequestError {
@@ -19,4 +21,9 @@ export function isForeignKeyConstraintPrismaError(error: any): error is Prisma.P
 // generate OTP Function
 export const generateOTP = () => {
   return String(randomInt(100000, 1000000));
+};
+
+export const generateRandomFileName = (fileName: string) => {
+  const ext = path.extname(fileName);
+  return `${uuidv4()}${ext}`;
 };
