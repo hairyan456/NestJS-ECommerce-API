@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   FileTypeValidator,
   Get,
@@ -61,5 +62,11 @@ export class MediaController {
         res.status(notFound.getStatus()).json(notFound.getResponse());
       }
     });
+  }
+
+  @Post('images/upload/presigned-url')
+  @Public()
+  async createPresignedUrl(@Body() body: { fileName: string }) {
+    return this.mediaService.getPresignedUrl(body);
   }
 }
