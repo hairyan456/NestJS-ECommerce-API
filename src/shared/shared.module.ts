@@ -30,6 +30,14 @@ import { S3Service } from 'src/shared/services/s3.service';
       useClass: AuthenticationGuard,
     },
   ],
-  exports: [PrismaService, HashingService, TokenService, EmailService, SharedUserRepository, SharedRoleRepository],
+  exports: [
+    PrismaService,
+    HashingService,
+    TokenService,
+    EmailService,
+    SharedUserRepository,
+    SharedRoleRepository,
+    S3Service,
+  ],
 })
 export class SharedModule {}
