@@ -3,18 +3,22 @@ import { BrandRepo } from 'src/routes/brand/brand.repo';
 import { CreateBrandBodyType, UpdateBrandBodyType } from 'src/routes/brand/brand.model';
 import { isNotFoundPrismaError } from 'src/shared/helpers';
 import { PaginationQueryType } from 'src/shared/models/request.model';
+import { I18nContext } from 'nestjs-i18n';
 
 @Injectable()
 export class BrandService {
-  constructor(private brandRepo: BrandRepo) {}
+  constructor(
+    private brandRepo: BrandRepo,
+    // private readonly i18n: I18nService<I18nTranslations>,
+  ) {}
 
   async list(pagination: PaginationQueryType) {
-    const data = await this.brandRepo.list(pagination);
+    const data = await this.brandRepo.list(pagination, I18nContext.current()?.lang as string);
     return data;
   }
 
   async findById(id: number) {
-    const brand = await this.brandRepo.findById(id);
+    const brand = await this.brandRepo.findById(id, I18nContext.current()?.lang as string);
     if (!brand) {
       throw new NotFoundException('Không tìm thấy brand trong hệ thống');
     }
