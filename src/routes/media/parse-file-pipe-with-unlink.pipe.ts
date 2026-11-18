@@ -8,7 +8,7 @@ export class ParseFilePipeWithUnlink extends ParseFilePipe {
 
   async transform(files: Array<Express.Multer.File>): Promise<any> {
     return super.transform(files).catch(async (error) => {
-      await Promise.all(files.map((file) => unlink(file.path)));
+      await Promise.all(files?.map((file) => unlink(file.path)));
       throw error;
     });
   }

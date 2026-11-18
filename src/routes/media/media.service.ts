@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { unlink } from 'fs/promises';
+import { PresignedUploadFileBodyType } from 'src/routes/media/media.model';
 import { generateRandomFileName } from 'src/shared/helpers';
 import { S3Service } from 'src/shared/services/s3.service';
 
@@ -29,10 +30,10 @@ export class MediaService {
       }),
     );
 
-    return result;
+    return { data: result };
   }
 
-  async getPresignedUrl(body: { fileName: string }) {
+  async getPresignedUrl(body: PresignedUploadFileBodyType) {
     const randomFilename = generateRandomFileName(body.fileName);
     const presignedUrl = await this.s3Service.createPresignedUrlWithClient(randomFilename);
     const url = presignedUrl.split('?')[0]; // Lấy URL gốc
