@@ -224,7 +224,7 @@ model Product {
   brand               Brand                @relation(fields: [brandId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   images              String[]
   categories          Category[]
-  variants            Json[]
+  variants            Json
   skus                SKU[]
   reviews             Review[]
   productTranslations ProductTranslation[]
