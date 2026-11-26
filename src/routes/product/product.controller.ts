@@ -15,6 +15,7 @@ import { User } from 'src/shared/decorators/user.decorator';
 import { MessageResDTO } from 'src/shared/dtos/response.dto';
 
 @Controller('products')
+@Public()
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
